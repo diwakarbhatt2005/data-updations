@@ -32,7 +32,19 @@ export const DatabaseSelector = () => {
       setLoading(true);
       setError(null);
       
-      // Mock data for now - replace with actual API call
+      // Call the actual API endpoint
+      const response = await fetch('http://127.0.0.1:8000/api/databases');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch databases');
+      }
+      
+      const databases = await response.json();
+      setDatabases(databases);
+    } catch (err) {
+      setError('Failed to fetch databases. Please check your connection and try again.');
+      
+      // Fallback to mock data if API fails
       const mockDatabases = [
         'admin_panel_db/student_data',
         'admin_panel_db/employee_data', 
@@ -40,13 +52,7 @@ export const DatabaseSelector = () => {
         'admin_panel_db/inventory_data',
         'admin_panel_db/customer_data'
       ];
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       setDatabases(mockDatabases);
-    } catch (err) {
-      setError('Failed to fetch databases. Please try again.');
     } finally {
       setLoading(false);
     }
