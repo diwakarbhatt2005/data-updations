@@ -71,18 +71,8 @@ export const DataTable = () => {
       setIsSaving(true);
       setError(null);
 
-      // Mock API call - replace with actual endpoint
-      const response = await fetch(`http://127.0.0.1:8000/api/update/${selectedDatabase}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tableData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update data');
-      }
+      // Mock save - simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       setEditMode(false);
       toast({
