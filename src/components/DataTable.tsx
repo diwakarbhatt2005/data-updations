@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 export const DataTable = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<string | null>(null);
+  const [newColumnName, setNewColumnName] = useState('');
   
   const {
     tableData,
@@ -30,8 +32,11 @@ export const DataTable = () => {
     updateCell,
     addRow,
     addMultipleRows,
+    addColumn,
     deleteRow,
+    renameColumn,
     resetToOriginal,
+    saveChanges,
     setError,
   } = useDashboardStore();
 
@@ -47,16 +52,25 @@ export const DataTable = () => {
   const handlePaste = useCallback((e: React.ClipboardEvent, rowIndex: number, field: string) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    console.log('Pasted data:', pastedData);
     
+    // Support both tab and comma separated data
     const rows = pastedData.split('\n').filter(row => row.trim());
-    console.log('Parsed rows:', rows);
     
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+      toast({
+        title: "Paste Error",
+        description: "No valid data found to paste.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate and detect delimiter
+    const sampleRow = rows[0];
+    const delimiter = sampleRow.includes('\t') ? '\t' : ',';
     
     // Calculate how many new rows we need
     const neededRows = Math.max(0, (rowIndex + rows.length) - tableData.length);
-    console.log('Need to add rows:', neededRows, 'Current table length:', tableData.length);
     
     // Add required rows all at once
     if (neededRows > 0) {
@@ -66,27 +80,29 @@ export const DataTable = () => {
     // Use setTimeout to ensure rows are added before updating cells
     setTimeout(() => {
       let pastedCells = 0;
+      let truncatedCells = 0;
       const startFieldIndex = columns.indexOf(field);
       
       rows.forEach((row, rowOffset) => {
-        const cells = row.split('\t');
+        const cells = row.split(delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''));
         const currentRowIndex = rowIndex + rowOffset;
         
         cells.forEach((cell, cellIndex) => {
           const fieldIndex = startFieldIndex + cellIndex;
           const currentField = columns[fieldIndex];
           
-          if (currentField) {
-            console.log(`Updating cell [${currentRowIndex}][${currentField}] = ${cell.trim()}`);
-            updateCell(currentRowIndex, currentField, cell.trim());
+          if (currentField && currentRowIndex < tableData.length + neededRows) {
+            updateCell(currentRowIndex, currentField, cell);
             pastedCells++;
+          } else if (!currentField) {
+            truncatedCells++;
           }
         });
       });
       
       toast({
         title: "Data Pasted Successfully",
-        description: `Pasted ${pastedCells} cells across ${rows.length} rows.`,
+        description: `Pasted ${pastedCells} cells across ${rows.length} rows.${truncatedCells > 0 ? ` ${truncatedCells} cells were truncated.` : ''}`,
       });
     }, 200);
   }, [columns, tableData, updateCell, addMultipleRows, toast]);
@@ -99,7 +115,8 @@ export const DataTable = () => {
       // Mock save - simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      setEditMode(false);
+      // Save changes to original data to persist them
+      saveChanges();
       toast({
         title: "Success",
         description: "Data updated successfully!",
@@ -113,6 +130,29 @@ export const DataTable = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleColumnRename = (oldName: string, newName: string) => {
+    if (newName.trim() && newName !== oldName) {
+      renameColumn(oldName, newName);
+      toast({
+        title: "Column Renamed",
+        description: `Column "${oldName}" renamed to "${newName}".`,
+      });
+    }
+    setEditingColumn(null);
+    setNewColumnName('');
+  };
+
+  const handleAddColumn = () => {
+    const columnName = prompt('Enter new column name:');
+    if (columnName && columnName.trim()) {
+      addColumn(columnName.trim());
+      toast({
+        title: "Column Added",
+        description: `New column "${columnName}" added successfully.`,
+      });
     }
   };
 
@@ -188,24 +228,32 @@ export const DataTable = () => {
       {isEditMode && (
         <Card className="bg-gradient-card shadow-card border-0">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Button
-                onClick={addRow}
-                variant="outline"
-                className="border-accent text-accent hover:bg-accent hover:text-white transition-smooth"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Row
-              </Button>
-              <Button
-                onClick={resetToOriginal}
-                variant="outline"
-                className="border-muted-foreground text-muted-foreground hover:bg-muted transition-smooth"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Reset All
-              </Button>
-            </div>
+              <div className="flex items-center space-x-2 flex-wrap">
+                <Button
+                  onClick={addRow}
+                  variant="outline"
+                  className="border-accent text-accent hover:bg-accent hover:text-white transition-smooth"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Row
+                </Button>
+                <Button
+                  onClick={handleAddColumn}
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary hover:text-white transition-smooth"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Column
+                </Button>
+                <Button
+                  onClick={resetToOriginal}
+                  variant="outline"
+                  className="border-muted-foreground text-muted-foreground hover:bg-muted transition-smooth"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset All
+                </Button>
+              </div>
           </CardContent>
         </Card>
       )}
@@ -214,15 +262,60 @@ export const DataTable = () => {
       <Card className="bg-gradient-card shadow-card border-0">
         <CardContent className="p-0">
           <div className="overflow-auto max-h-[70vh] relative">
-            <table className="w-full">
+            <table className="w-full border-collapse">
               <thead className="sticky top-0 bg-table-header text-white z-10 shadow-md">
                 <tr>
                   {isEditMode && (
-                    <th className="p-4 text-left font-medium bg-table-header">Actions</th>
+                    <th className="p-4 text-left font-medium bg-table-header sticky left-0 z-20">Actions</th>
                   )}
-                  {columns.map((column) => (
-                    <th key={column} className="p-4 text-left font-medium min-w-[150px] bg-table-header">
-                      {column.replace('_', ' ').toUpperCase()}
+                  {columns.map((column, index) => (
+                    <th key={column} className={`p-2 text-left font-medium min-w-[150px] bg-table-header ${index === 0 && !isEditMode ? 'sticky left-0 z-20' : ''}`}>
+                      {isEditMode ? (
+                        <div className="flex items-center space-x-2">
+                          {editingColumn === column ? (
+                            <div className="flex items-center space-x-1">
+                              <Input
+                                value={newColumnName}
+                                onChange={(e) => setNewColumnName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleColumnRename(column, newColumnName);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingColumn(null);
+                                    setNewColumnName('');
+                                  }
+                                }}
+                                className="h-8 text-sm text-black"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleColumnRename(column, newColumnName)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <Save className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <span>{column.replace('_', ' ').toUpperCase()}</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingColumn(column);
+                                  setNewColumnName(column);
+                                }}
+                                className="h-6 w-6 p-0 text-white hover:bg-white/20"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        column.replace('_', ' ').toUpperCase()
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -234,7 +327,7 @@ export const DataTable = () => {
                     className="border-b border-table-border hover:bg-table-row-hover transition-smooth"
                   >
                     {isEditMode && (
-                      <td className="p-4 sticky left-0 bg-background z-5">
+                      <td className="p-4 sticky left-0 bg-background z-15 border-r border-table-border">
                         <Button
                           onClick={() => deleteRow(rowIndex)}
                           size="sm"
@@ -245,8 +338,8 @@ export const DataTable = () => {
                         </Button>
                       </td>
                     )}
-                    {columns.map((column) => (
-                      <td key={`${rowIndex}-${column}`} className="p-4">
+                    {columns.map((column, colIndex) => (
+                      <td key={`${rowIndex}-${column}`} className={`p-4 ${colIndex === 0 && !isEditMode ? 'sticky left-0 bg-background z-15 border-r border-table-border' : ''}`}>
                         {isEditMode ? (
                           <Input
                             value={row[column] || ''}
