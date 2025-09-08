@@ -30,6 +30,7 @@ export interface DashboardState {
   setError: (error: string | null) => void;
   updateCell: (rowIndex: number, field: string, value: any) => void;
   addRow: () => void;
+  addMultipleRows: (count: number) => void;
   deleteRow: (rowIndex: number) => void;
   resetToOriginal: () => void;
   
@@ -88,7 +89,29 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       Object.keys(firstRow).forEach(key => {
         newRow[key] = '';
       });
-      set({ tableData: [...tableData, newRow] });
+      const newTableData = [...tableData, newRow];
+      set({ tableData: newTableData });
+      console.log('Added row, new length:', newTableData.length);
+    }
+  },
+  
+  addMultipleRows: (count: number) => {
+    const { tableData } = get();
+    if (tableData.length > 0 && count > 0) {
+      const firstRow = tableData[0];
+      const newRows: DatabaseRow[] = [];
+      
+      for (let i = 0; i < count; i++) {
+        const newRow: DatabaseRow = {};
+        Object.keys(firstRow).forEach(key => {
+          newRow[key] = '';
+        });
+        newRows.push(newRow);
+      }
+      
+      const newTableData = [...tableData, ...newRows];
+      set({ tableData: newTableData });
+      console.log(`Added ${count} rows, new length:`, newTableData.length);
     }
   },
   

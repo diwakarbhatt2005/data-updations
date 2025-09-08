@@ -29,6 +29,7 @@ export const DataTable = () => {
     setEditMode,
     updateCell,
     addRow,
+    addMultipleRows,
     deleteRow,
     resetToOriginal,
     setError,
@@ -46,36 +47,49 @@ export const DataTable = () => {
   const handlePaste = useCallback((e: React.ClipboardEvent, rowIndex: number, field: string) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text');
-    const rows = pastedData.split('\n').filter(row => row.trim());
+    console.log('Pasted data:', pastedData);
     
-    // Auto-add rows if needed
-    const neededRows = (rowIndex + rows.length) - tableData.length;
+    const rows = pastedData.split('\n').filter(row => row.trim());
+    console.log('Parsed rows:', rows);
+    
+    if (rows.length === 0) return;
+    
+    // Calculate how many new rows we need
+    const neededRows = Math.max(0, (rowIndex + rows.length) - tableData.length);
+    console.log('Need to add rows:', neededRows, 'Current table length:', tableData.length);
+    
+    // Add required rows all at once
     if (neededRows > 0) {
-      for (let i = 0; i < neededRows; i++) {
-        addRow();
-      }
+      addMultipleRows(neededRows);
     }
     
-    let pastedCells = 0;
-    rows.forEach((row, rowIndexOffset) => {
-      const cells = row.split('\t');
-      const currentRowIndex = rowIndex + rowIndexOffset;
+    // Use setTimeout to ensure rows are added before updating cells
+    setTimeout(() => {
+      let pastedCells = 0;
+      const startFieldIndex = columns.indexOf(field);
       
-      cells.forEach((cell, cellIndex) => {
-        const fieldIndex = columns.indexOf(field) + cellIndex;
-        const currentField = columns[fieldIndex];
-        if (currentField && currentRowIndex < tableData.length) {
-          updateCell(currentRowIndex, currentField, cell.trim());
-          pastedCells++;
-        }
+      rows.forEach((row, rowOffset) => {
+        const cells = row.split('\t');
+        const currentRowIndex = rowIndex + rowOffset;
+        
+        cells.forEach((cell, cellIndex) => {
+          const fieldIndex = startFieldIndex + cellIndex;
+          const currentField = columns[fieldIndex];
+          
+          if (currentField) {
+            console.log(`Updating cell [${currentRowIndex}][${currentField}] = ${cell.trim()}`);
+            updateCell(currentRowIndex, currentField, cell.trim());
+            pastedCells++;
+          }
+        });
       });
-    });
-    
-    toast({
-      title: "Data Pasted Successfully",
-      description: `Pasted ${pastedCells} cells across ${rows.length} rows.`,
-    });
-  }, [columns, tableData, updateCell, addRow, toast]);
+      
+      toast({
+        title: "Data Pasted Successfully",
+        description: `Pasted ${pastedCells} cells across ${rows.length} rows.`,
+      });
+    }, 200);
+  }, [columns, tableData, updateCell, addMultipleRows, toast]);
 
   const handleSave = async () => {
     try {
