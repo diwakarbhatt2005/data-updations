@@ -48,23 +48,34 @@ export const DataTable = () => {
     const pastedData = e.clipboardData.getData('text');
     const rows = pastedData.split('\n').filter(row => row.trim());
     
-    rows.forEach((row, index) => {
+    // Auto-add rows if needed
+    const neededRows = (rowIndex + rows.length) - tableData.length;
+    if (neededRows > 0) {
+      for (let i = 0; i < neededRows; i++) {
+        addRow();
+      }
+    }
+    
+    let pastedCells = 0;
+    rows.forEach((row, rowIndexOffset) => {
       const cells = row.split('\t');
-      const currentRowIndex = rowIndex + index;
+      const currentRowIndex = rowIndex + rowIndexOffset;
       
       cells.forEach((cell, cellIndex) => {
-        const currentField = columns[columns.indexOf(field) + cellIndex];
-        if (currentField && tableData[currentRowIndex]) {
+        const fieldIndex = columns.indexOf(field) + cellIndex;
+        const currentField = columns[fieldIndex];
+        if (currentField && currentRowIndex < tableData.length) {
           updateCell(currentRowIndex, currentField, cell.trim());
+          pastedCells++;
         }
       });
     });
     
     toast({
-      title: "Data Pasted",
-      description: `Pasted ${rows.length} rows of data successfully.`,
+      title: "Data Pasted Successfully",
+      description: `Pasted ${pastedCells} cells across ${rows.length} rows.`,
     });
-  }, [columns, tableData, updateCell, toast]);
+  }, [columns, tableData, updateCell, addRow, toast]);
 
   const handleSave = async () => {
     try {
@@ -188,15 +199,15 @@ export const DataTable = () => {
       {/* Data Table */}
       <Card className="bg-gradient-card shadow-card border-0">
         <CardContent className="p-0">
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh] relative">
             <table className="w-full">
-              <thead className="sticky top-0 bg-table-header text-white">
+              <thead className="sticky top-0 bg-table-header text-white z-10 shadow-md">
                 <tr>
                   {isEditMode && (
-                    <th className="p-4 text-left font-medium">Actions</th>
+                    <th className="p-4 text-left font-medium bg-table-header">Actions</th>
                   )}
                   {columns.map((column) => (
-                    <th key={column} className="p-4 text-left font-medium min-w-[150px]">
+                    <th key={column} className="p-4 text-left font-medium min-w-[150px] bg-table-header">
                       {column.replace('_', ' ').toUpperCase()}
                     </th>
                   ))}
@@ -209,7 +220,7 @@ export const DataTable = () => {
                     className="border-b border-table-border hover:bg-table-row-hover transition-smooth"
                   >
                     {isEditMode && (
-                      <td className="p-4">
+                      <td className="p-4 sticky left-0 bg-background z-5">
                         <Button
                           onClick={() => deleteRow(rowIndex)}
                           size="sm"
@@ -229,6 +240,7 @@ export const DataTable = () => {
                             onPaste={(e) => handlePaste(e, rowIndex, column)}
                             className="border-input focus:border-primary transition-smooth"
                             placeholder={`Enter ${column}`}
+                            title={`Paste data here to auto-fill multiple cells. Row ${rowIndex + 1}, Column: ${column}`}
                           />
                         ) : (
                           <span className="text-foreground">
@@ -242,6 +254,16 @@ export const DataTable = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Paste Instructions in Edit Mode */}
+          {isEditMode && (
+            <div className="p-4 border-t border-table-border bg-muted/30">
+              <p className="text-sm text-muted-foreground">
+                💡 <strong>Copy-Paste Tip:</strong> Copy data from Excel/Sheets and paste in any cell. 
+                Data will auto-expand to fill rows and columns. New rows will be created automatically if needed.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

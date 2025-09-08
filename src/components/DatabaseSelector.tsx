@@ -126,7 +126,7 @@ export const DatabaseSelector = () => {
                 Database Admin Dashboard
               </CardTitle>
               <CardDescription className="text-muted-foreground mt-2">
-                Select a database to view and manage your data
+                Select a table to view and manage your data
               </CardDescription>
             </div>
           </CardHeader>
@@ -141,7 +141,7 @@ export const DatabaseSelector = () => {
             
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">
-                Choose Database
+                Select a Table to View
               </label>
               <Select 
                 value={selectedDb} 
@@ -149,7 +149,7 @@ export const DatabaseSelector = () => {
                 disabled={isLoading}
               >
                 <SelectTrigger className="h-12 border-2 transition-smooth focus:border-primary hover:border-primary/50">
-                  <SelectValue placeholder="Select a database..." />
+                  <SelectValue placeholder="Choose Table..." />
                 </SelectTrigger>
                 <SelectContent className="bg-white shadow-elevation border-0">
                   {databases.map((db) => (
@@ -176,13 +176,13 @@ export const DatabaseSelector = () => {
                   Loading...
                 </>
               ) : (
-                'Load Database'
+                'Load Table'
               )}
             </Button>
 
             {isLoading && !error && (
               <div className="text-center text-sm text-muted-foreground">
-                Fetching database information...
+                Fetching table information...
               </div>
             )}
           </CardContent>
