@@ -32,21 +32,29 @@ export const DatabaseSelector = () => {
       setLoading(true);
       setError(null);
       
-      // Using mock data
-      const mockDatabases = [
-        'admin_panel_db/student_data',
-        'admin_panel_db/employee_data', 
-        'admin_panel_db/sales_data',
-        'admin_panel_db/inventory_data',
-        'admin_panel_db/customer_data'
-      ];
+      // Fetch real data from API
+      const response = await fetch('http://168.231.103.13:6004/api/simulator/tables', {
+        method: 'GET',
+        headers: {
+          'accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setDatabases(mockDatabases);
+      if (data.status === 'success' && data.tables) {
+        const tableNames = data.tables.map((table: { table_name: string; description: string | null }) => table.table_name);
+        setDatabases(tableNames);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err) {
-      setError('Failed to fetch databases. Please try again.');
+      console.error('Failed to fetch databases:', err);
+      setError('Failed to fetch databases. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -60,13 +68,8 @@ export const DatabaseSelector = () => {
       setError(null);
       setSelectedDatabase(selectedDb);
 
-      // Using mock data based on selected database
-      const mockData = generateMockData(selectedDb);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      setTableData(mockData);
+      // For now, using empty array - will need second API for table data
+      setTableData([]);
       
       // Navigate to data view page
       navigate('/view-data');
@@ -77,41 +80,6 @@ export const DatabaseSelector = () => {
     }
   };
 
-  const generateMockData = (dbName: string) => {
-    const baseData = {
-      'admin_panel_db/student_data': [
-        { id: 1, name: 'John Doe', email: 'john@example.com', grade: 'A', course: 'Computer Science' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', grade: 'B+', course: 'Mathematics' },
-        { id: 3, name: 'Mike Johnson', email: 'mike@example.com', grade: 'A-', course: 'Physics' },
-        { id: 4, name: 'Sarah Wilson', email: 'sarah@example.com', grade: 'A+', course: 'Chemistry' },
-        { id: 5, name: 'David Brown', email: 'david@example.com', grade: 'B', course: 'Biology' },
-      ],
-      'admin_panel_db/employee_data': [
-        { id: 1, name: 'Alice Cooper', position: 'Manager', department: 'HR', salary: 75000 },
-        { id: 2, name: 'Bob Miller', position: 'Developer', department: 'IT', salary: 65000 },
-        { id: 3, name: 'Carol Davis', position: 'Designer', department: 'Marketing', salary: 60000 },
-        { id: 4, name: 'Dan Wilson', position: 'Analyst', department: 'Finance', salary: 55000 },
-      ],
-      'admin_panel_db/sales_data': [
-        { id: 1, product: 'Laptop', price: 999, quantity: 50, revenue: 49950 },
-        { id: 2, product: 'Mouse', price: 25, quantity: 200, revenue: 5000 },
-        { id: 3, product: 'Keyboard', price: 75, quantity: 100, revenue: 7500 },
-        { id: 4, product: 'Monitor', price: 300, quantity: 30, revenue: 9000 },
-      ],
-      'admin_panel_db/inventory_data': [
-        { id: 1, item: 'Office Chair', stock: 25, category: 'Furniture', location: 'Warehouse A' },
-        { id: 2, item: 'Desk Lamp', stock: 40, category: 'Lighting', location: 'Warehouse B' },
-        { id: 3, item: 'Filing Cabinet', stock: 15, category: 'Storage', location: 'Warehouse A' },
-      ],
-      'admin_panel_db/customer_data': [
-        { id: 1, name: 'ABC Corp', email: 'contact@abc.com', phone: '555-0123', status: 'Active' },
-        { id: 2, name: 'XYZ Ltd', email: 'info@xyz.com', phone: '555-0456', status: 'Pending' },
-        { id: 3, name: 'Tech Solutions', email: 'hello@tech.com', phone: '555-0789', status: 'Active' },
-      ]
-    };
-    
-    return baseData[dbName as keyof typeof baseData] || [];
-  };
 
   return (
     <div className="min-h-screen bg-dashboard-bg flex items-center justify-center p-6">
@@ -158,7 +126,7 @@ export const DatabaseSelector = () => {
                       value={db}
                       className="hover:bg-gradient-hover transition-smooth"
                     >
-                      {db.replace('admin_panel_db/', '').replace('_', ' ').toUpperCase()}
+                      {db.replace(/_/g, ' ').toUpperCase()}
                     </SelectItem>
                   ))}
                 </SelectContent>
