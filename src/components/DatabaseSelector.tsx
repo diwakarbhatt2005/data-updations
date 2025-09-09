@@ -32,7 +32,6 @@ export const DatabaseSelector = () => {
       setLoading(true);
       setError(null);
       
-      // Try to fetch real data from API
       const response = await fetch('http://168.231.103.13:6004/api/simulator/tables', {
         method: 'GET',
         headers: {
@@ -54,11 +53,7 @@ export const DatabaseSelector = () => {
       }
     } catch (err) {
       console.error('Failed to fetch databases:', err);
-      
-      // Fallback to mock data due to CORS/network issues
-      const mockTables = ['employees', 'financial_records', 'products'];
-      setDatabases(mockTables);
-      setError('Using demo data due to network connectivity issues.');
+      setError('Failed to fetch databases. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
