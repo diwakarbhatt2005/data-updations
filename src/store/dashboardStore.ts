@@ -31,9 +31,7 @@ export interface DashboardState {
   updateCell: (rowIndex: number, field: string, value: any) => void;
   addRow: () => void;
   addMultipleRows: (count: number) => void;
-  addColumn: (columnName: string) => void;
   deleteRow: (rowIndex: number) => void;
-  renameColumn: (oldName: string, newName: string) => void;
   resetToOriginal: () => void;
   saveChanges: () => void;
   
@@ -124,24 +122,6 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ tableData: newData });
   },
   
-  addColumn: (columnName: string) => {
-    const { tableData } = get();
-    const newData = tableData.map(row => ({ ...row, [columnName]: '' }));
-    set({ tableData: newData });
-  },
-
-  renameColumn: (oldName: string, newName: string) => {
-    const { tableData } = get();
-    const newData = tableData.map(row => {
-      const newRow = { ...row };
-      if (oldName in newRow) {
-        newRow[newName] = newRow[oldName];
-        delete newRow[oldName];
-      }
-      return newRow;
-    });
-    set({ tableData: newData });
-  },
 
   saveChanges: () => {
     const { tableData } = get();

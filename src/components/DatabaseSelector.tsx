@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Database, Loader2, AlertCircle } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export const DatabaseSelector = () => {
   const navigate = useNavigate();
@@ -81,79 +82,94 @@ export const DatabaseSelector = () => {
 
 
   return (
-    <div className="min-h-screen bg-dashboard-bg flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <Card className="bg-gradient-card shadow-elevation border-0">
-          <CardHeader className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto shadow-primary">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-muted/50">
+      {/* Header with Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <div className="flex items-center justify-center min-h-screen p-6">
+        <div className="w-full max-w-lg space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-gradient-primary rounded-2xl mx-auto flex items-center justify-center shadow-lg">
               <Database className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <CardTitle className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Database Admin Dashboard
+            <h1 className="text-4xl font-bold text-foreground">
+              Database Manager
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              Select a database to start managing your data
+            </p>
+          </div>
+
+          {/* Database Selection Card */}
+          <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
+            <CardHeader className="pb-6">
+              <CardTitle className="text-center text-xl font-semibold">
+                Available Databases
               </CardTitle>
-              <CardDescription className="text-muted-foreground mt-2">
-                Select a table to view and manage your data
-              </CardDescription>
-            </div>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            </CardHeader>
             
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Select a Table to View
-              </label>
-              <Select 
-                value={selectedDb} 
-                onValueChange={setSelectedDb}
-                disabled={isLoading}
-              >
-                <SelectTrigger className="h-12 border-2 transition-smooth focus:border-primary hover:border-primary/50">
-                  <SelectValue placeholder="Choose Table..." />
-                </SelectTrigger>
-                <SelectContent className="bg-white shadow-elevation border-0">
-                  {databases.map((db) => (
-                    <SelectItem 
-                      key={db} 
-                      value={db}
-                      className="hover:bg-gradient-hover transition-smooth"
-                    >
-                      {db.replace(/_/g, ' ').toUpperCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={handleDatabaseSelect}
-              disabled={!selectedDb || isLoading}
-              className="w-full h-12 bg-gradient-primary hover:bg-primary-hover text-white font-medium shadow-primary transition-smooth disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                'Load Table'
+            <CardContent className="space-y-6">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            </Button>
-
-            {isLoading && !error && (
-              <div className="text-center text-sm text-muted-foreground">
-                Fetching table information...
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="space-y-3 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                    <p className="text-muted-foreground">Loading databases...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Select value={selectedDb} onValueChange={setSelectedDb}>
+                    <SelectTrigger className="h-12 bg-muted/50 border-border hover:bg-muted transition-colors">
+                      <SelectValue placeholder="Choose a database..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border shadow-lg">
+                      {databases.map((db) => (
+                        <SelectItem 
+                          key={db} 
+                          value={db}
+                          className="hover:bg-accent hover:text-accent-foreground cursor-pointer py-3"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Database className="w-4 h-4 text-primary" />
+                            <span className="font-medium">{db.replace('_', ' ')}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button
+                    onClick={handleDatabaseSelect}
+                    disabled={!selectedDb || isLoading}
+                    className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-lg transition-colors disabled:opacity-50"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load Table'
+                    )}
+                  </Button>
+                  
+                  <p className="text-sm text-muted-foreground text-center">
+                    {databases.length} database{databases.length !== 1 ? 's' : ''} available
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

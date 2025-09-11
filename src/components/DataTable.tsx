@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,17 +10,20 @@ import {
   Trash2, 
   RotateCcw, 
   Loader2,
-  AlertCircle 
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 import { useDashboardStore } from '@/store/dashboardStore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { BulkAddModal } from '@/components/BulkAddModal';
 
 export const DataTable = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [newColumnName, setNewColumnName] = useState('');
+  const [showBulkAddModal, setShowBulkAddModal] = useState(false);
   
   const {
     tableData,
@@ -32,9 +34,7 @@ export const DataTable = () => {
     updateCell,
     addRow,
     addMultipleRows,
-    addColumn,
     deleteRow,
-    renameColumn,
     resetToOriginal,
     saveChanges,
     setError,
@@ -133,28 +133,7 @@ export const DataTable = () => {
     }
   };
 
-  const handleColumnRename = (oldName: string, newName: string) => {
-    if (newName.trim() && newName !== oldName) {
-      renameColumn(oldName, newName);
-      toast({
-        title: "Column Renamed",
-        description: `Column "${oldName}" renamed to "${newName}".`,
-      });
-    }
-    setEditingColumn(null);
-    setNewColumnName('');
-  };
 
-  const handleAddColumn = () => {
-    const columnName = prompt('Enter new column name:');
-    if (columnName && columnName.trim()) {
-      addColumn(columnName.trim());
-      toast({
-        title: "Column Added",
-        description: `New column "${columnName}" added successfully.`,
-      });
-    }
-  };
 
   if (tableData.length === 0) {
     return (
@@ -167,29 +146,30 @@ export const DataTable = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="bg-gradient-card shadow-card border-0">
+      <Card className="shadow-lg border bg-card/80 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl font-bold text-foreground">
+              <CardTitle className="text-3xl font-bold text-foreground">
                 {selectedDatabase?.replace('admin_panel_db/', '').replace('_', ' ').toUpperCase()}
               </CardTitle>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-muted-foreground mt-2 text-lg">
                 {tableData.length} records • {columns.length} columns
               </p>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               {!isEditMode ? (
                 <Button
                   onClick={() => setEditMode(true)}
-                  className="bg-gradient-primary hover:bg-primary-hover text-white shadow-primary transition-smooth"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg transition-smooth px-6 py-2"
+                  size="lg"
                 >
                   <Edit3 className="w-4 h-4 mr-2" />
-                  Edit
+                  Edit Mode
                 </Button>
               ) : (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <Button
                     onClick={resetToOriginal}
                     variant="outline"
@@ -201,7 +181,8 @@ export const DataTable = () => {
                   <Button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="bg-accent hover:bg-accent/90 text-white shadow-primary transition-smooth"
+                    className="bg-accent hover:bg-accent/90 text-white shadow-lg transition-smooth px-6 py-2"
+                    size="lg"
                   >
                     {isSaving ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -226,9 +207,9 @@ export const DataTable = () => {
 
       {/* Row Actions (only in edit mode) */}
       {isEditMode && (
-        <Card className="bg-gradient-card shadow-card border-0">
+        <Card className="shadow-md border bg-card/50 backdrop-blur-sm">
           <CardContent className="pt-6">
-              <div className="flex items-center space-x-2 flex-wrap">
+              <div className="flex items-center space-x-3 flex-wrap">
                 <Button
                   onClick={addRow}
                   variant="outline"
@@ -238,12 +219,12 @@ export const DataTable = () => {
                   Add Row
                 </Button>
                 <Button
-                  onClick={handleAddColumn}
+                  onClick={() => setShowBulkAddModal(true)}
                   variant="outline"
                   className="border-primary text-primary hover:bg-primary hover:text-white transition-smooth"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Column
+                  <Upload className="w-4 h-4 mr-2" />
+                  Bulk Add
                 </Button>
                 <Button
                   onClick={resetToOriginal}
@@ -259,63 +240,22 @@ export const DataTable = () => {
       )}
 
       {/* Data Table */}
-      <Card className="bg-gradient-card shadow-card border-0">
+      <Card className="shadow-lg border bg-card/80 backdrop-blur-sm">
         <CardContent className="p-0">
-          <div className="overflow-auto max-h-[70vh] relative">
+          <div className="overflow-auto max-h-[65vh] relative rounded-lg">
             <table className="w-full border-collapse">
-              <thead className="sticky top-0 bg-table-header text-white z-10 shadow-md">
+              <thead className="sticky top-0 bg-primary text-primary-foreground z-10 shadow-sm">
                 <tr>
                   {isEditMode && (
-                    <th className="p-4 text-left font-medium bg-table-header sticky left-0 z-20">Actions</th>
+                    <th className="px-3 py-4 text-left font-semibold bg-primary sticky left-0 z-20 border-r border-primary-foreground/20">
+                      Actions
+                    </th>
                   )}
                   {columns.map((column, index) => (
-                    <th key={column} className={`p-2 text-left font-medium min-w-[150px] bg-table-header ${index === 0 && !isEditMode ? 'sticky left-0 z-20' : ''}`}>
-                      {isEditMode ? (
-                        <div className="flex items-center space-x-2">
-                          {editingColumn === column ? (
-                            <div className="flex items-center space-x-1">
-                              <Input
-                                value={newColumnName}
-                                onChange={(e) => setNewColumnName(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleColumnRename(column, newColumnName);
-                                  } else if (e.key === 'Escape') {
-                                    setEditingColumn(null);
-                                    setNewColumnName('');
-                                  }
-                                }}
-                                className="h-8 text-sm text-black"
-                                autoFocus
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleColumnRename(column, newColumnName)}
-                                className="h-6 w-6 p-0"
-                              >
-                                <Save className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <span>{column.replace('_', ' ').toUpperCase()}</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingColumn(column);
-                                  setNewColumnName(column);
-                                }}
-                                className="h-6 w-6 p-0 text-white hover:bg-white/20"
-                              >
-                                <Edit3 className="w-3 h-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        column.replace('_', ' ').toUpperCase()
-                      )}
+                    <th key={column} className={`px-4 py-4 text-left font-semibold min-w-[150px] bg-primary ${index === 0 && !isEditMode ? 'sticky left-0 z-20 border-r border-primary-foreground/20' : ''}`}>
+                      <span className="text-sm uppercase tracking-wide">
+                        {column.replace('_', ' ')}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -324,34 +264,35 @@ export const DataTable = () => {
                 {tableData.map((row, rowIndex) => (
                   <tr 
                     key={rowIndex}
-                    className="border-b border-table-border hover:bg-table-row-hover transition-smooth"
+                    className="border-b border-border hover:bg-muted/50 transition-colors duration-200"
                   >
                     {isEditMode && (
-                      <td className="p-4 sticky left-0 bg-background z-15 border-r border-table-border">
+                      <td className="px-3 py-3 sticky left-0 bg-card z-15 border-r border-border">
                         <Button
                           onClick={() => deleteRow(rowIndex)}
                           size="sm"
                           variant="outline"
-                          className="border-destructive text-destructive hover:bg-destructive hover:text-white transition-smooth"
+                          className="h-8 w-8 p-0 border-destructive text-destructive hover:bg-destructive hover:text-white transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </td>
                     )}
                     {columns.map((column, colIndex) => (
-                      <td key={`${rowIndex}-${column}`} className={`p-4 ${colIndex === 0 && !isEditMode ? 'sticky left-0 bg-background z-15 border-r border-table-border' : ''}`}>
+                      <td key={`${rowIndex}-${column}`} className={`px-4 py-3 ${colIndex === 0 && !isEditMode ? 'sticky left-0 bg-card z-15 border-r border-border' : ''}`}>
                         {isEditMode ? (
                           <Input
                             value={row[column] || ''}
                             onChange={(e) => handleCellChange(rowIndex, column, e.target.value)}
                             onPaste={(e) => handlePaste(e, rowIndex, column)}
-                            className="border-input focus:border-primary transition-smooth"
-                            placeholder={`Enter ${column}`}
-                            title={`Paste data here to auto-fill multiple cells. Row ${rowIndex + 1}, Column: ${column}`}
+                            className="h-9 text-sm border-input focus:border-primary transition-colors"
+                            placeholder={`Enter ${column.replace('_', ' ')}`}
                           />
                         ) : (
-                          <span className="text-foreground">
-                            {row[column] || '-'}
+                          <span className="text-foreground text-sm">
+                            {row[column] || (
+                              <span className="text-muted-foreground italic">empty</span>
+                            )}
                           </span>
                         )}
                       </td>
@@ -362,17 +303,27 @@ export const DataTable = () => {
             </table>
           </div>
           
-          {/* Paste Instructions in Edit Mode */}
-          {isEditMode && (
-            <div className="p-4 border-t border-table-border bg-muted/30">
-              <p className="text-sm text-muted-foreground">
-                💡 <strong>Copy-Paste Tip:</strong> Copy data from Excel/Sheets and paste in any cell. 
-                Data will auto-expand to fill rows and columns. New rows will be created automatically if needed.
-              </p>
+          {/* Footer info */}
+          <div className="px-6 py-4 border-t border-border bg-muted/30">
+            <div className="flex justify-between items-center text-sm text-muted-foreground">
+              <span>
+                Showing {tableData.length} record{tableData.length !== 1 ? 's' : ''}
+              </span>
+              {isEditMode && (
+                <span className="text-primary font-medium">
+                  🔄 Edit mode active • Use Bulk Add for large datasets
+                </span>
+              )}
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Add Modal */}
+      <BulkAddModal 
+        isOpen={showBulkAddModal} 
+        onClose={() => setShowBulkAddModal(false)} 
+      />
     </div>
   );
 };

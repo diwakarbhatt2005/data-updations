@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { DataTable } from '@/components/DataTable';
 import { ChatBot } from '@/components/ChatBot';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useDashboardStore } from '@/store/dashboardStore';
 
 const ViewData = () => {
@@ -16,9 +17,9 @@ const ViewData = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dashboard-bg">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-white shadow-card border-b border-border">
+      <div className="bg-card/80 backdrop-blur-sm shadow-sm border-b border-border sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -26,7 +27,7 @@ const ViewData = () => {
                 onClick={() => navigate('/')}
                 variant="outline"
                 size="sm"
-                className="border-2 hover:bg-muted transition-smooth"
+                className="hover:bg-muted transition-smooth"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Selection
@@ -40,6 +41,7 @@ const ViewData = () => {
                 </p>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </div>
